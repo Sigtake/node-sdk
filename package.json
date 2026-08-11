@@ -15,9 +15,12 @@
   "keywords": [
     "sigtake",
     "alerts",
+    "alerting",
     "monitoring",
     "observability",
     "incidents",
+    "incident-response",
+    "typescript",
     "sdk"
   ],
   "type": "module",

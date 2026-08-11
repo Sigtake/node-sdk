@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Sigtake/node-sdk/main/assets/logo.png" alt="Sigtake" width="72" height="72" />
+</p>
+
 # @sigtake/sdk
 
 Official Node.js SDK for [Sigtake](https://sigtake.com). Sends alerts and signal

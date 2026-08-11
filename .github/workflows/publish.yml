@@ -11,6 +11,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # NPM_TOKEN lives in this environment's secrets; without the declaration the
+    # job gets an empty token and fails at publish with a 401.
+    environment: main
 
     steps:
       - name: Checkout
