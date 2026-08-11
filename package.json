@@ -1,0 +1,63 @@
+{
+  "name": "@sigtake/sdk",
+  "version": "0.1.0",
+  "description": "Official Node.js SDK for Sigtake — alert and signal ingestion.",
+  "license": "MIT",
+  "author": "Sigtake",
+  "homepage": "https://sigtake.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sigtake/node-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sigtake/node-sdk/issues"
+  },
+  "keywords": [
+    "sigtake",
+    "alerts",
+    "monitoring",
+    "observability",
+    "incidents",
+    "sdk"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
