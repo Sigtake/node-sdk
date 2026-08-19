@@ -53,6 +53,9 @@ meta.is_duplicate;       // true when it folded into an open incident
 meta.occurrence_count;   // how many times this incident has fired
 ```
 
+The response never echoes `payload` back. On a dedup hit the alert you get is the
+pre-existing one, and its payload may have been written by a different sender.
+
 Alerts are deduplicated on `source | title | severity` per project. An open alert
 with the same fingerprint gets its occurrence count bumped instead of opening a
 second incident, and notifications go out at occurrences 1, 10, 25, 50, 100, then

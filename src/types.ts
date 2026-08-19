@@ -38,6 +38,9 @@ export interface IngestAlertInput {
 /**
  * Tenant, project, team and API key ids are deliberately omitted: the caller
  * already knows which key it sent the alert with.
+ *
+ * `payload` is not returned either. On a dedup hit the server answers with the
+ * pre-existing alert, whose payload may belong to a different sender.
  */
 export interface Alert {
   id: string;
@@ -48,7 +51,6 @@ export interface Alert {
   fingerprint: string;
   occurrence_count: number;
   last_seen_at: string | null;
-  payload: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   resolved_at: string | null;

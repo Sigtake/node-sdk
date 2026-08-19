@@ -16,7 +16,6 @@ const ALERT = {
   fingerprint: 'a'.repeat(64),
   occurrence_count: 1,
   last_seen_at: null,
-  payload: {},
   created_at: '2026-08-11T10:00:00.000Z',
   updated_at: '2026-08-11T10:00:00.000Z',
   resolved_at: null,
