@@ -3,6 +3,10 @@ import { ensureOk, type HttpClient } from '../http.js';
 import type { IngestAlertInput, IngestAlertResponse, RequestOptions } from '../types.js';
 
 const PAYLOAD_MAX_LENGTH = 8192;
+const LINKS_MAX = 5;
+const LINK_LABEL_MAX_LENGTH = 80;
+const LINK_URL_MAX_LENGTH = 1024;
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
 export class AlertsResource {
   constructor(private readonly http: HttpClient) {}
@@ -25,6 +29,7 @@ export class AlertsResource {
         team_code: input.team_code,
         ...(input.severity === undefined ? {} : { severity: input.severity }),
         ...(input.payload === undefined ? {} : { payload: input.payload }),
+        ...(input.links === undefined ? {} : { links: input.links }),
       },
       options ?? {},
     );
@@ -57,4 +62,51 @@ function validateAlert(input: IngestAlertInput): void {
       throw localValidationError(`payload exceeds the ${PAYLOAD_MAX_LENGTH} character limit`);
     }
   }
+  if (input.links !== undefined) {
+    validateLinks(input.links);
+  }
+}
+
+// Same rules as the server, measured on the trimmed value. Duplicate URLs are left
+// for the server to drop rather than rejected here.
+function validateLinks(links: unknown): void {
+  if (!Array.isArray(links)) {
+    throw localValidationError('links must be an array');
+  }
+  if (links.length > LINKS_MAX) {
+    throw localValidationError(`links accepts at most ${LINKS_MAX} entries`);
+  }
+  links.forEach((link: unknown, i) => {
+    const { label, url } = (link ?? {}) as { label?: unknown; url?: unknown };
+    if (typeof label !== 'string' || typeof url !== 'string') {
+      throw localValidationError(`links[${i}] must be an object with string label and url`);
+    }
+    const trimmedLabel = label.trim();
+    if (
+      trimmedLabel.length < 1 ||
+      trimmedLabel.length > LINK_LABEL_MAX_LENGTH ||
+      CONTROL_CHARS.test(trimmedLabel)
+    ) {
+      throw localValidationError(
+        `links[${i}].label must be 1 to ${LINK_LABEL_MAX_LENGTH} characters without control characters`,
+      );
+    }
+    if (!isAllowedLinkUrl(url.trim())) {
+      throw localValidationError(
+        `links[${i}].url must be an http(s) URL without credentials, up to ${LINK_URL_MAX_LENGTH} characters`,
+      );
+    }
+  });
+}
+
+function isAllowedLinkUrl(url: string): boolean {
+  if (url.length > LINK_URL_MAX_LENGTH || CONTROL_CHARS.test(url)) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  return !parsed.username && !parsed.password;
 }

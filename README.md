@@ -46,12 +46,21 @@ const { data, meta } = await sigtake.alerts.ingest({
   team_code: 'PAY',
   severity: 'critical',        // 'critical' | 'high' | 'medium' | 'low' | 'info', defaults to 'info'
   payload: { attempt: 3 },     // optional, must serialize to 8 KB or less
+  links: [                     // optional, up to 5, http(s) only
+    { label: 'Runbook', url: 'https://wiki.example.com/runbooks/payments' },
+    { label: 'Dashboard', url: 'https://grafana.example.com/d/payments' },
+  ],
 });
 
 data.id;                 // alert id
 meta.is_duplicate;       // true when it folded into an open incident
 meta.occurrence_count;   // how many times this incident has fired
 ```
+
+`links` show up as buttons on the alert in the app, email, Slack and Teams. Labels
+are 1–80 characters; URLs must be `http` or `https`, up to 1024 characters, without
+`user:pass@`. On a dedup hit new links are added to the open alert's, never
+replacing the ones already there.
 
 The response never echoes `payload` back. On a dedup hit the alert you get is the
 pre-existing one, and its payload may have been written by a different sender.

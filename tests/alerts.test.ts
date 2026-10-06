@@ -134,4 +134,64 @@ describe('alerts.ingest', () => {
     ).rejects.toThrow(/team_code/);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it('sends links as given', async () => {
+    const fetchImpl = mockFetch([
+      jsonResponse(201, { data: ALERT, meta: { is_duplicate: false, occurrence_count: 1 } }),
+    ]);
+    const links = [
+      { label: 'Runbook', url: 'https://wiki.example.com/runbooks/checkout' },
+      { label: 'Dashboard', url: 'http://grafana.internal/d/checkout' },
+    ];
+
+    await makeClient(fetchImpl).alerts.ingest({ title: 'x', source: 'y', team_code: 'OPS', links });
+
+    const sent = JSON.parse((fetchImpl.mock.calls[0]![1] as RequestInit).body as string);
+    expect(sent.links).toEqual(links);
+  });
+
+  it('leaves duplicate link URLs for the server to drop', async () => {
+    const fetchImpl = mockFetch([
+      jsonResponse(201, { data: ALERT, meta: { is_duplicate: false, occurrence_count: 1 } }),
+    ]);
+    const link = { label: 'Runbook', url: 'https://wiki.example.com/r' };
+
+    await makeClient(fetchImpl).alerts.ingest({
+      title: 'x',
+      source: 'y',
+      team_code: 'OPS',
+      links: [link, link],
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  const link = (url: string, label = 'Runbook') => ({ label, url });
+
+  it.each([
+    ['more than 5 links', Array.from({ length: 6 }, (_, i) => link(`https://e.com/${i}`)), /at most 5/],
+    ['a blank label', [link('https://e.com', '   ')], /links\[0\]\.label/],
+    ['an 81-character label', [link('https://e.com', 'x'.repeat(81))], /links\[0\]\.label/],
+    ['a label with a newline', [link('https://e.com', 'Run\nbook')], /links\[0\]\.label/],
+    ['a javascript: URL', [link('https://e.com'), link('javascript:alert(1)')], /links\[1\]\.url/],
+    ['an ftp: URL', [link('ftp://e.com/file')], /links\[0\]\.url/],
+    ['a URL with credentials', [link('https://user:pass@e.com')], /links\[0\]\.url/],
+    ['a 1025-character URL', [link(`https://e.com/${'a'.repeat(1011)}`)], /links\[0\]\.url/],
+    ['a relative URL', [link('/runbooks/checkout')], /links\[0\]\.url/],
+    ['a non-object entry', ['https://e.com'], /links\[0\] must be an object/],
+    ['a non-array value', { label: 'Runbook', url: 'https://e.com' }, /links must be an array/],
+  ])('rejects %s without touching the network', async (_case, links, message) => {
+    const fetchImpl = mockFetch([jsonResponse(201, {})]);
+
+    const call = makeClient(fetchImpl).alerts.ingest({
+      title: 'x',
+      source: 'y',
+      team_code: 'OPS',
+      links: links as never,
+    });
+
+    await expect(call).rejects.toBeInstanceOf(SigtakeValidationError);
+    await expect(call).rejects.toThrow(message);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
 });

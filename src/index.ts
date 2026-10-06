@@ -13,6 +13,7 @@ export {
 
 export type {
   Alert,
+  AlertLink,
   AlertStatus,
   IngestAlertInput,
   IngestAlertResponse,

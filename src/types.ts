@@ -24,6 +24,13 @@ export interface RequestOptions {
   timeout?: number;
 }
 
+export interface AlertLink {
+  /** 1–80 characters, shown as the link text. */
+  label: string;
+  /** http(s) only, up to 1024 characters, no `user:pass@`. */
+  url: string;
+}
+
 export interface IngestAlertInput {
   title: string;
   /** Defaults to `info` server-side. */
@@ -33,6 +40,11 @@ export interface IngestAlertInput {
   payload?: Record<string, unknown>;
   /** Must exist in the tenant AND be assigned to the project this API key belongs to. */
   team_code: string;
+  /**
+   * Up to 5 reference links (runbook, dashboard, logs). On a dedup hit they are
+   * merged into the open alert's links, never replacing them.
+   */
+  links?: AlertLink[];
 }
 
 /**

@@ -4,6 +4,17 @@ All notable changes to `@sigtake/sdk` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-10-06
+
+### Added
+
+- `links` on `alerts.ingest()`: up to 5 `{ label, url }` reference links
+  (runbook, dashboard, logs), validated locally with the server's rules —
+  http(s) only, no embedded credentials, labels of 1–80 characters. On a dedup
+  hit they are merged into the open alert's links. New exported type
+  `AlertLink`. Requires a Sigtake API that supports links; older ones ignore
+  the field.
+
 ## [0.2.0] - 2026-08-18
 
 ### Removed
