@@ -26,7 +26,7 @@ function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
-function parseRetryAfter(header: string | null): number | undefined {
+export function parseRetryAfter(header: string | null): number | undefined {
   if (!header) return undefined;
   const seconds = Number(header);
   if (Number.isFinite(seconds) && seconds >= 0) return seconds;

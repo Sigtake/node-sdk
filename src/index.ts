@@ -1,4 +1,5 @@
 export { Sigtake } from './client.js';
+export { heartbeat } from './heartbeat/index.js';
 
 export {
   SigtakeError,
@@ -15,11 +16,16 @@ export type {
   Alert,
   AlertLink,
   AlertStatus,
+  FailOptions,
+  Heartbeat,
+  HeartbeatOptions,
+  HeartbeatRun,
   IngestAlertInput,
   IngestAlertResponse,
   IngestSignalsInput,
   IngestSignalsResponse,
   RequestOptions,
+  RunOptions,
   Severity,
   SignalReading,
   SigtakeOptions,

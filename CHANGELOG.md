@@ -4,6 +4,17 @@ All notable changes to `@sigtake/sdk` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-10-23
+
+### Added
+
+- `heartbeat(pingUrl)` and `sigtake.heartbeat(pingUrl)` for Sigtake Heartbeats:
+  `start()`, `success()`, `fail({ exitCode })` and `wrap(fn)`. No API key needed, the
+  ping URL is the credential. Each run sends a run id (`rid`), a random UUID or your
+  own, so concurrent runs of an on demand check are tracked separately. Pings never
+  reject: failures go to `onError`, which defaults to `console.warn`. New exported
+  types `Heartbeat`, `HeartbeatRun`, `HeartbeatOptions`, `RunOptions`, `FailOptions`.
+
 ## [0.3.0] - 2026-10-06
 
 ### Added

@@ -4,8 +4,8 @@
 
 # @sigtake/sdk
 
-Official Node.js SDK for [Sigtake](https://sigtake.com). Sends alerts and signal
-readings. Zero dependencies, ESM + CJS, typed.
+Official Node.js SDK for [Sigtake](https://sigtake.com). Sends alerts, signal
+readings and heartbeat pings. Zero dependencies, ESM + CJS, typed.
 
 ```bash
 npm install @sigtake/sdk
@@ -104,6 +104,102 @@ if (result.rejected) {
 ```
 
 A total rejection (nothing stored) throws `SigtakeValidationError`.
+
+## Heartbeats
+
+A heartbeat watches a job: a cron, a queue worker, a Lambda. It needs **no API key**:
+the ping URL shown on the heartbeat in Sigtake is the credential.
+
+```ts
+import { heartbeat } from '@sigtake/sdk';
+
+const backup = heartbeat(process.env.BACKUP_PING_URL!);
+
+await backup.wrap(() => runBackup());
+```
+
+`wrap` reports the start, runs the job, then reports success, or a failure with exit
+code 1 and rethrows the job's error as is. It waits for every ping before resolving,
+so a Lambda does not freeze with a ping in flight.
+
+If you already have a client, `sigtake.heartbeat(url)` is the same function. It shares
+only the client's `fetch`; the API key and custom headers are never sent with a ping.
+
+```ts
+import { Sigtake } from '@sigtake/sdk';
+
+const sigtake = new Sigtake({ apiKey: process.env.SIGTAKE_API_KEY! });
+const invoices = sigtake.heartbeat(process.env.INVOICES_PING_URL!);
+
+await invoices.wrap(async () => {
+  const failed = await processInvoices();
+  if (failed.length) {
+    await sigtake.alerts.ingest({
+      title: `${failed.length} invoices failed`,
+      severity: 'medium',
+      source: 'invoices',
+      team_code: 'OPS',
+    });
+  }
+});
+```
+
+By hand, with your own exit code:
+
+```ts
+const run = await backup.start();
+try {
+  await runBackup();
+  await run.success();
+} catch (err) {
+  await run.fail({ exitCode: 2 });
+  throw err;
+}
+```
+
+A job without a start, like a cron that only reports when it ends, calls
+`backup.success()` or `backup.fail({ exitCode })` directly. Without a start, a run that
+dies silently is only caught by the check's schedule, never by its maximum duration.
+
+### Run ids
+
+Every `start()` and `wrap()` sends a run id (`rid`), a random UUID unless you pass your
+own:
+
+```ts
+await invoices.wrap(() => processLead(lead), { rid: `lead-${lead.id}` });
+```
+
+- 1–64 characters of letters, digits, `.`, `_`, `:` and `-`.
+- Unique **while the run is open**: two overlapping runs with the same `rid` are measured
+  as one. If the same lead can run twice in parallel, add the attempt: `lead-${id}-${attempt}`.
+- Not a secret: it shows in the check's history and in server logs. No emails or tokens.
+- Honoured on **on demand** checks only; scheduled checks ignore it.
+
+### Failed pings never break the job
+
+`start`, `success` and `fail` never reject: they resolve `true` when the ping was
+delivered and `false` otherwise. A failed ping goes to `onError`, which defaults to
+`console.warn`, so a rotated token does not go unnoticed.
+
+```ts
+heartbeat(url, {
+  timeout: 5_000,   // ms, per attempt
+  maxRetries: 2,    // network errors and 5xx only
+  onError: (err) => logger.warn({ err }, 'heartbeat ping failed'),  // () => {} to silence
+});
+```
+
+| Error passed to `onError` | When |
+|---|---|
+| `SigtakeNotFoundError` | 404: unknown or rotated token, or the check is archived |
+| `SigtakeValidationError` | 400 from the server, or an invalid `rid` / `exitCode` caught locally (`status: 0`, nothing sent) |
+| `SigtakeRateLimitError` | 429: too many pings or open runs for this check; never retried |
+| `SigtakeServerError` | 5xx, after retries |
+| `SigtakeNetworkError` | DNS, connection or timeout, after retries |
+
+An invalid ping URL throws a `TypeError` when the heartbeat is created, so a bad
+configuration fails at boot.
 
 ## Errors
 

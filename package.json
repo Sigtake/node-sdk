@@ -1,7 +1,7 @@
 {
   "name": "@sigtake/sdk",
-  "version": "0.3.0",
-  "description": "Official Node.js SDK for Sigtake — alert and signal ingestion.",
+  "version": "0.4.0",
+  "description": "Official Node.js SDK for Sigtake — alerts, signals and heartbeats.",
   "license": "MIT",
   "author": "Sigtake",
   "homepage": "https://sigtake.com",
@@ -20,6 +20,8 @@
     "observability",
     "incidents",
     "incident-response",
+    "heartbeat",
+    "cron",
     "typescript",
     "sdk"
   ],

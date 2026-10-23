@@ -1,3 +1,5 @@
+import type { SigtakeError } from './errors.js';
+
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
 export type AlertStatus = 'firing' | 'acknowledged' | 'resolved';
@@ -15,6 +17,52 @@ export interface SigtakeOptions {
   headers?: Record<string, string>;
   /** Override the global `fetch`, mainly for testing or custom agents. */
   fetch?: typeof globalThis.fetch;
+}
+
+export interface HeartbeatOptions {
+  /** Per-attempt timeout in milliseconds. Defaults to 5000. */
+  timeout?: number;
+  /** Retries after the first attempt, on network errors and 5xx only. Defaults to 2, 0 disables. */
+  maxRetries?: number;
+  /** Receives every failed ping. Defaults to `console.warn`; pass `() => {}` to silence. */
+  onError?: (err: SigtakeError) => void;
+  /** Override the global `fetch`. */
+  fetch?: typeof globalThis.fetch;
+}
+
+export interface RunOptions {
+  /**
+   * Run id, honoured on on demand checks only. 1–64 characters of letters, digits, `.`, `_`, `:`, `-`.
+   * Must be unique while the run is open, and is shown in the check's history: no emails or secrets.
+   */
+  rid?: string;
+}
+
+export interface FailOptions extends RunOptions {
+  /** 1–255. Without it the failure is reported with no exit code. */
+  exitCode?: number;
+}
+
+export interface HeartbeatRun {
+  readonly rid: string;
+  /** Whether the start ping was delivered. */
+  readonly started: boolean;
+  success(): Promise<boolean>;
+  fail(options?: { exitCode?: number }): Promise<boolean>;
+}
+
+export interface Heartbeat {
+  /** Opens a run. Without `rid`, a random UUID is used. */
+  start(options?: RunOptions): Promise<HeartbeatRun>;
+  /** Resolves `true` when the ping was delivered; never rejects. */
+  success(options?: RunOptions): Promise<boolean>;
+  /** Resolves `true` when the ping was delivered; never rejects. */
+  fail(options?: FailOptions): Promise<boolean>;
+  /**
+   * Runs `fn` between a start and its result: success, or a failure with exit code 1 and the error
+   * rethrown as is. Waits for every ping before resolving.
+   */
+  wrap<T>(fn: () => T | Promise<T>, options?: RunOptions): Promise<T>;
 }
 
 export interface RequestOptions {
