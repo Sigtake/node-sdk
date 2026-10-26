@@ -9,12 +9,14 @@ import type {
   RunOptions,
 } from '../types.js';
 
+const DEFAULT_BASE_URL = 'https://api.sigtake.com';
 const DEFAULT_TIMEOUT = 5_000;
 const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_RETRY_BASE_DELAY = 500;
 const EXIT_CODE_MAX = 255;
 // Mirrors the backend's RID_PATTERN; an invalid rid answers 400 on an on demand check.
 const RID_PATTERN = /^[A-Za-z0-9._:-]{1,64}$/;
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]+$/;
 const PING_PATH = /\/ping\/[A-Za-z0-9_-]+$/;
 
 /** Test-only knobs, kept out of the public options. */
@@ -26,35 +28,45 @@ function defaultOnError(err: SigtakeError): void {
   console.warn(`[sigtake] heartbeat ping failed: ${err.message}`);
 }
 
-function parsePingUrl(pingUrl: unknown): string {
-  if (typeof pingUrl !== 'string' || pingUrl.trim() === '') {
-    throw new TypeError('Sigtake: heartbeat `pingUrl` is required. Copy it from the heartbeat in Sigtake.');
-  }
+function parsePingUrl(pingUrl: string): string {
   let url: URL;
   try {
-    url = new URL(pingUrl.trim());
+    url = new URL(pingUrl);
   } catch {
-    throw new TypeError(`Sigtake: heartbeat \`pingUrl\` is not a valid URL: ${pingUrl}`);
+    throw new TypeError(`Sigtake: heartbeat ping URL is not a valid URL: ${pingUrl}`);
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new TypeError('Sigtake: heartbeat `pingUrl` must be an http(s) URL.');
+    throw new TypeError('Sigtake: heartbeat ping URL must be an http(s) URL.');
   }
   if (url.search !== '' || url.hash !== '') {
-    throw new TypeError('Sigtake: heartbeat `pingUrl` must not carry a query or fragment.');
+    throw new TypeError('Sigtake: heartbeat ping URL must not carry a query or fragment.');
   }
   const path = url.pathname.replace(/\/+$/, '');
   if (!PING_PATH.test(path)) {
-    throw new TypeError('Sigtake: heartbeat `pingUrl` must end in /ping/<token>.');
+    throw new TypeError('Sigtake: heartbeat ping URL must end in /ping/<token>.');
   }
   return `${url.origin}${path}`;
 }
 
+/** Accepts the token alone, or the full ping URL that 0.4.0 required. A full URL ignores `baseUrl`. */
+function resolvePingBase(tokenOrUrl: unknown, baseUrl: string | undefined): string {
+  if (typeof tokenOrUrl !== 'string' || tokenOrUrl.trim() === '') {
+    throw new TypeError('Sigtake: heartbeat `token` is required. Copy it from the heartbeat in Sigtake.');
+  }
+  const value = tokenOrUrl.trim();
+  if (value.includes('/') || value.includes(':')) return parsePingUrl(value);
+  if (!TOKEN_PATTERN.test(value)) {
+    throw new TypeError('Sigtake: heartbeat `token` is not valid. Copy it from the heartbeat in Sigtake.');
+  }
+  return `${(baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '')}/ping/${value}`;
+}
+
 export function createHeartbeat(
-  pingUrl: string,
+  token: string,
   options: HeartbeatOptions = {},
   internals: HeartbeatInternals = {},
 ): Heartbeat {
-  const base = parsePingUrl(pingUrl);
+  const base = resolvePingBase(token, options.baseUrl);
   const fetchImpl = options.fetch ?? globalThis.fetch;
   if (typeof fetchImpl !== 'function') {
     throw new TypeError(
@@ -138,9 +150,10 @@ export function createHeartbeat(
 }
 
 /**
- * Reports to one Sigtake Heartbeat. Needs no API key: the ping URL is the credential.
- * No method ever rejects; failed pings go to `onError`, which defaults to `console.warn`.
+ * Reports to one Sigtake Heartbeat. Needs no API key: the heartbeat's token is the credential.
+ * Takes the token, or the full ping URL. No method ever rejects; failed pings go to `onError`,
+ * which defaults to `console.warn`.
  */
-export function heartbeat(pingUrl: string, options?: HeartbeatOptions): Heartbeat {
-  return createHeartbeat(pingUrl, options);
+export function heartbeat(token: string, options?: HeartbeatOptions): Heartbeat {
+  return createHeartbeat(token, options);
 }

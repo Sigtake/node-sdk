@@ -4,6 +4,15 @@ All notable changes to `@sigtake/sdk` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-26
+
+### Added
+
+- `heartbeat(token)` and `sigtake.heartbeat(token)` take the heartbeat's token alone; the
+  SDK builds the ping URL. New `baseUrl` heartbeat option, defaulting to
+  `https://api.sigtake.com`; `sigtake.heartbeat()` uses the client's `baseUrl`. A full
+  ping URL is still accepted and keeps its own host.
+
 ## [0.4.0] - 2026-10-23
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@sigtake/sdk",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Official Node.js SDK for Sigtake — alerts, signals and heartbeats.",
   "license": "MIT",
   "author": "Sigtake",

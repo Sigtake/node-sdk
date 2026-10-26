@@ -20,6 +20,8 @@ export interface SigtakeOptions {
 }
 
 export interface HeartbeatOptions {
+  /** API host the token is sent to. Defaults to `https://api.sigtake.com`; ignored when a full ping URL is passed. */
+  baseUrl?: string;
   /** Per-attempt timeout in milliseconds. Defaults to 5000. */
   timeout?: number;
   /** Retries after the first attempt, on network errors and 5xx only. Defaults to 2, 0 disables. */

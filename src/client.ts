@@ -12,6 +12,7 @@ export class Sigtake {
   readonly alerts: AlertsResource;
   readonly signals: SignalsResource;
   private readonly fetchImpl: typeof globalThis.fetch;
+  private readonly baseUrl: string;
 
   constructor(options: SigtakeOptions) {
     if (!options?.apiKey || typeof options.apiKey !== 'string') {
@@ -25,9 +26,10 @@ export class Sigtake {
       );
     }
 
+    this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
     const http = new HttpClient({
       apiKey: options.apiKey,
-      baseUrl: (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, ''),
+      baseUrl: this.baseUrl,
       timeout: options.timeout ?? DEFAULT_TIMEOUT,
       maxRetries: options.maxRetries ?? DEFAULT_MAX_RETRIES,
       headers: options.headers ?? {},
@@ -40,10 +42,10 @@ export class Sigtake {
   }
 
   /**
-   * Same as the standalone `heartbeat()`. Only the client's `fetch` is shared: the ping URL is
-   * the credential, so the API key and custom headers are never sent with it.
+   * Same as the standalone `heartbeat()`. Only the client's `fetch` and `baseUrl` are shared: the
+   * token is the credential, so the API key and custom headers are never sent with it.
    */
-  heartbeat(pingUrl: string, options: HeartbeatOptions = {}): Heartbeat {
-    return createHeartbeat(pingUrl, { fetch: this.fetchImpl, ...options });
+  heartbeat(token: string, options: HeartbeatOptions = {}): Heartbeat {
+    return createHeartbeat(token, { fetch: this.fetchImpl, baseUrl: this.baseUrl, ...options });
   }
 }

@@ -52,7 +52,9 @@ afterEach(() => {
 describe('heartbeat URL', () => {
   it.each([
     ['', 'required'],
-    ['not a url', 'not a valid URL'],
+    ['not a token', '`token` is not valid'],
+    ['abc.def', '`token` is not valid'],
+    ['https//:', 'not a valid URL'],
     ['ftp://api.sigtake.com/ping/abc', 'http(s)'],
     ['https://api.sigtake.com/ping/abc?x=1', 'query'],
     ['https://api.sigtake.com/ping/abc#x', 'query'],
@@ -67,6 +69,42 @@ describe('heartbeat URL', () => {
   it('accepts a trailing slash', async () => {
     const fetchImpl = textFetch([ok]);
     const beat = createHeartbeat(`${PING_URL}/`, { fetch: fetchImpl as unknown as typeof fetch });
+    await beat.success();
+    expect(fetchImpl.mock.calls[0]![0]).toBe(PING_URL);
+  });
+});
+
+describe('heartbeat token', () => {
+  const TOKEN = 'abcDEF123_-xyz';
+
+  it('sends the token to the default host', async () => {
+    const fetchImpl = textFetch([ok, ok, ok]);
+    const beat = createHeartbeat(TOKEN, { fetch: fetchImpl as unknown as typeof fetch });
+    await beat.success();
+    await beat.fail({ exitCode: 3 });
+    const run = await beat.start();
+
+    expect(fetchImpl.mock.calls[0]![0]).toBe(PING_URL);
+    expect(fetchImpl.mock.calls[1]![0]).toBe(`${PING_URL}/3`);
+    expect(fetchImpl.mock.calls[2]![0]).toBe(`${PING_URL}/start?rid=${run.rid}`);
+  });
+
+  it('trims the token and uses a custom baseUrl', async () => {
+    const fetchImpl = textFetch([ok]);
+    const beat = createHeartbeat(` ${TOKEN} `, {
+      baseUrl: 'http://localhost:3000/',
+      fetch: fetchImpl as unknown as typeof fetch,
+    });
+    await beat.success();
+    expect(fetchImpl.mock.calls[0]![0]).toBe(`http://localhost:3000/ping/${TOKEN}`);
+  });
+
+  it('ignores baseUrl when given a full ping URL', async () => {
+    const fetchImpl = textFetch([ok]);
+    const beat = createHeartbeat(PING_URL, {
+      baseUrl: 'http://localhost:3000',
+      fetch: fetchImpl as unknown as typeof fetch,
+    });
     await beat.success();
     expect(fetchImpl.mock.calls[0]![0]).toBe(PING_URL);
   });
@@ -332,6 +370,17 @@ describe('Sigtake#heartbeat', () => {
 
     expect(ownFetch).toHaveBeenCalledOnce();
     expect(clientFetch).not.toHaveBeenCalled();
+  });
+
+  it("sends a token to the client's baseUrl", async () => {
+    const fetchImpl = mockFetch([{ status: 204 }]);
+    const sigtake = new Sigtake({
+      apiKey: 'sk_x',
+      baseUrl: 'https://staging.example.com/',
+      fetch: fetchImpl as unknown as typeof fetch,
+    });
+    await sigtake.heartbeat('abcDEF123_-xyz').success();
+    expect(fetchImpl.mock.calls[0]![0]).toBe('https://staging.example.com/ping/abcDEF123_-xyz');
   });
 
   it('still requires the API key on the client', () => {
